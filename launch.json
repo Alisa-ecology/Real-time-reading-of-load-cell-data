@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run tough.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tough.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        }
+    ]
+}
