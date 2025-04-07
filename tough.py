@@ -11,6 +11,7 @@ from threading import Thread, Event  # 用于线程控制
 import tkinter as tk  # 用于创建按钮界面
 import matplotlib.animation as animation  # 用于实时动态绘图
 import matplotlib  # 用于设置后端
+from tkinter import filedialog  # 导入文件对话框模块
 matplotlib.use("TkAgg")  # 设置 TkAgg 后端以兼容 tkinter
 
 # 配置日志记录
@@ -171,6 +172,16 @@ def manual_zero():
     else:
         print("调零失败，无法读取压力值。")
 
+def select_save_path():
+    """让用户选择图片保存路径"""
+    global image_folder
+    selected_folder = filedialog.askdirectory(initialdir=desktop_path, title="选择图片保存路径")
+    if selected_folder:  # 如果用户选择了路径
+        image_folder = selected_folder
+        print(f"图片保存路径已更改为: {image_folder}")
+    else:
+        print("使用默认路径: 桌面的 test 文件夹")
+
 def stop_data_collection():
     """停止数据采集"""
     stop_event.set()
@@ -190,7 +201,7 @@ def stop_data_collection():
             if (pressure_data[i] >= pressure_data[i - 1]) and (pressure_data[i] > pressure_data[i + 1]):
                 plt.text(time_data[i], pressure_data[i], f"{pressure_data[i]:.2f}", fontsize=8, ha="center", va="bottom", color="red")
 
-        # 保存图片到 "test" 文件夹
+        # 保存图片到用户选择的路径或默认路径
         image_path = os.path.join(image_folder, f"采集结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
         plt.savefig(image_path)
         print(f"图片已保存到: {image_path}")
@@ -252,6 +263,9 @@ def create_gui():
 
     zero_button = tk.Button(button_frame, text="调零", command=manual_zero)
     zero_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    path_button = tk.Button(button_frame, text="选择保存路径", command=select_save_path)  # 添加选择路径按钮
+    path_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     exit_button = tk.Button(button_frame, text="退出程序", command=lambda: root.after(0, root.destroy))
     exit_button.pack(side=tk.LEFT, padx=5, pady=5)
