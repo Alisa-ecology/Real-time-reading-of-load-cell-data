@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#
+#.\venv\Scripts\activate
 # Hi There!
 #
 # You may be wondering what this giant blob of binary data here is, you might

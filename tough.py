@@ -1,6 +1,7 @@
 # Ensure the required packages are installed:
 # pip install minimalmodbus pyserial
-import minimalmodbus # type: ignore
+from datetime import datetime  # 用于记录时间
+import minimalmodbus  # type: ignore
 import time
 import logging
 
@@ -55,7 +56,6 @@ def read_pressure(retries=3):
             if len(raw_data) < 5:
                 raise ValueError("返回的数据长度不足，无法解析")
             
-            
             # 提取第四个和第五个字节
             byte4 = raw_data[3]
             byte5 = raw_data[4]
@@ -70,12 +70,20 @@ def read_pressure(retries=3):
             time.sleep(1)  # 等待一段时间后重试
     return None  # 多次重试失败后返回 None
 
-
+# 调用读取压力值函数
 try:
+    zero_offset = None  # 用于存储调零偏移值
     while True:
         pressure_value = read_pressure()
         if pressure_value is not None:
-            print(f"实时压力值: {pressure_value:.2f} kPa")
+            if zero_offset is None:
+                # 第一次读取时进行调零
+                zero_offset = pressure_value
+                print(f"调零完成，偏移值: {zero_offset:.2f} kg")
+            else:
+                # 后续读取减去调零偏移值
+                adjusted_pressure = pressure_value - zero_offset
+                print(f"实时压力值: {adjusted_pressure:.2f} kg")
         else:
             print("读取压力值失败，已记录日志。")
         time.sleep(1)  # 采样间隔（根据需求调整）
@@ -83,4 +91,3 @@ except KeyboardInterrupt:
     print("程序终止")
 finally:
     instrument.serial.close()
-# 关闭串口连接
