@@ -6,6 +6,9 @@ import time
 import logging
 import matplotlib.pyplot as plt  # 用于绘制压力-时间曲线
 import threading  # 用于实现手动停止功能
+import os  # 用于创建文件夹
+from threading import Thread, Event  # 用于线程控制
+import tkinter as tk  # 用于创建按钮界面
 
 # 配置日志记录
 logging.basicConfig(filename="error.log", level=logging.ERROR, format="%(asctime)s - %(message)s")
@@ -22,6 +25,14 @@ instrument.serial.timeout = 1  # 超时时间（秒）
 pressure_data = []
 time_data = []
 stop_flag = False  # 用于控制程序停止的标志
+
+# 初始化停止事件
+stop_event = Event()
+
+# 创建桌面上的 "test" 文件夹
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+image_folder = os.path.join(desktop_path, "test")
+os.makedirs(image_folder, exist_ok=True)
 
 def stop_program():
     global stop_flag
@@ -82,46 +93,41 @@ def read_pressure(retries=3):
             time.sleep(1)  # 等待一段时间后重试
     return None  # 多次重试失败后返回 None
 
-# 调用读取压力值函数
-try:
-    zero_offset = None  # 用于存储调零偏移值
-    start_time = None  # 用于记录调零后的起始时间
-    stop_thread = threading.Thread(target=stop_program)  # 启动停止线程
-    stop_thread.start()
-
-    while not stop_flag:
+def start_data_collection():
+    global zero_offset, start_time, pressure_data, time_data
+    zero_offset = None
+    start_time = None
+    pressure_data = []
+    time_data = []
+    stop_event.clear()
+    print("数据采集已启动...")
+    while not stop_event.is_set():
         pressure_value = read_pressure()
         if pressure_value is not None:
-            current_time = datetime.now()  # 获取当前时间
+            current_time = datetime.now()
             if zero_offset is None:
-                # 第一次读取时进行调零
                 zero_offset = pressure_value
-                start_time = current_time  # 记录调零后的起始时间
+                start_time = current_time
                 print(f"调零完成，偏移值: {zero_offset:.2f} kg")
             else:
-                # 后续读取减去调零偏移值
                 adjusted_pressure = pressure_value - zero_offset
-                elapsed_time = (current_time - start_time).total_seconds()  # 计算从调零开始的秒数
+                elapsed_time = (current_time - start_time).total_seconds()
                 print(f"实时压力值: {adjusted_pressure:.2f} kg, 时间: {elapsed_time:.2f} 秒")
-                
-                # 记录压力值和时间
                 pressure_data.append(adjusted_pressure)
                 time_data.append(elapsed_time)
         else:
             print("读取压力值失败，已记录日志。")
-        time.sleep(0.05)  # 采样间隔改为 50 毫秒
-except KeyboardInterrupt:
-    print("程序终止")
-finally:
-    instrument.serial.close()
-    
-    # 绘制压力-时间曲线
+        time.sleep(0.05)
+
+def stop_data_collection():
+    stop_event.set()
+    print("数据采集已停止。")
     if pressure_data and time_data:
         plt.figure(figsize=(10, 6))
-        plt.plot(time_data, pressure_data, label="F (kg)", marker="o")  # 修改图例
-        plt.xlabel("Time (s)")  # 修改横坐标名称
-        plt.ylabel("F (kg)")  # 修改纵坐标名称
-        plt.title("F-Time Curve")  # 修改标题
+        plt.plot(time_data, pressure_data, label="F (kg)", marker="o")
+        plt.xlabel("Time (s)")
+        plt.ylabel("F (kg)")
+        plt.title("F-Time Curve")
         plt.legend()
         plt.grid()
 
@@ -130,4 +136,35 @@ finally:
             if (pressure_data[i] >= pressure_data[i - 1]) and (pressure_data[i] > pressure_data[i + 1]):
                 plt.text(time_data[i], pressure_data[i], f"{pressure_data[i]:.2f}", fontsize=8, ha="center", va="bottom", color="red")
 
+        # 保存图片到 "test" 文件夹
+        image_path = os.path.join(image_folder, f"采集结果_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+        plt.savefig(image_path)
+        print(f"图片已保存到: {image_path}")
         plt.show()
+
+# 创建按钮界面
+def create_gui():
+    root = tk.Tk()
+    root.title("数据采集控制")
+
+    start_button = tk.Button(root, text="启动采集", command=lambda: Thread(target=start_data_collection).start())
+    start_button.pack(pady=10)
+
+    stop_button = tk.Button(root, text="停止采集", command=stop_data_collection)
+    stop_button.pack(pady=10)
+
+    exit_button = tk.Button(root, text="退出程序", command=lambda: (stop_data_collection(), root.destroy()))
+    exit_button.pack(pady=10)
+
+    root.mainloop()
+
+# 主程序入口
+if __name__ == "__main__":
+    try:
+        create_gui()
+    except KeyboardInterrupt:
+        print("程序终止")
+    finally:
+        if not stop_event.is_set():
+            stop_data_collection()
+        instrument.serial.close()
