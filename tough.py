@@ -4,6 +4,8 @@ from datetime import datetime  # 用于记录时间
 import minimalmodbus  # type: ignore
 import time
 import logging
+import matplotlib.pyplot as plt  # 用于绘制压力-时间曲线
+import threading  # 用于实现手动停止功能
 
 # 配置日志记录
 logging.basicConfig(filename="error.log", level=logging.ERROR, format="%(asctime)s - %(message)s")
@@ -15,6 +17,16 @@ instrument.serial.bytesize = 8
 instrument.serial.parity = minimalmodbus.serial.PARITY_NONE
 instrument.serial.stopbits = 1
 instrument.serial.timeout = 1  # 超时时间（秒）
+
+# 初始化存储压力值和时间戳的列表
+pressure_data = []
+time_data = []
+stop_flag = False  # 用于控制程序停止的标志
+
+def stop_program():
+    global stop_flag
+    input("按下回车键停止程序...")
+    stop_flag = True
 
 def check_serial_port():
     try:
@@ -73,9 +85,13 @@ def read_pressure(retries=3):
 # 调用读取压力值函数
 try:
     zero_offset = None  # 用于存储调零偏移值
-    while True:
+    stop_thread = threading.Thread(target=stop_program)  # 启动停止线程
+    stop_thread.start()
+
+    while not stop_flag:
         pressure_value = read_pressure()
         if pressure_value is not None:
+            current_time = datetime.now()  # 获取当前时间
             if zero_offset is None:
                 # 第一次读取时进行调零
                 zero_offset = pressure_value
@@ -84,6 +100,10 @@ try:
                 # 后续读取减去调零偏移值
                 adjusted_pressure = pressure_value - zero_offset
                 print(f"实时压力值: {adjusted_pressure:.2f} kg")
+                
+                # 记录压力值和时间
+                pressure_data.append(adjusted_pressure)
+                time_data.append(current_time)
         else:
             print("读取压力值失败，已记录日志。")
         time.sleep(1)  # 采样间隔（根据需求调整）
@@ -91,3 +111,15 @@ except KeyboardInterrupt:
     print("程序终止")
 finally:
     instrument.serial.close()
+    
+    # 绘制压力-时间曲线
+    if pressure_data and time_data:
+        plt.figure(figsize=(10, 6))
+        plt.plot(time_data, pressure_data, label="压力值 (kg)")
+        plt.xlabel("时间")
+        plt.ylabel("压力 (kg)")
+        plt.title("压力-时间曲线")
+        plt.legend()
+        plt.grid()
+        plt.gcf().autofmt_xdate()  # 自动格式化时间轴
+        plt.show()
