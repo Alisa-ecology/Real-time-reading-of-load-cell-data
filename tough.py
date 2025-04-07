@@ -119,6 +119,16 @@ def start_data_collection():
             print("读取压力值失败，已记录日志。")
         time.sleep(0.05)
 
+def manual_zero():
+    """手动调零功能"""
+    global zero_offset
+    pressure_value = read_pressure()
+    if pressure_value is not None:
+        zero_offset = pressure_value
+        print(f"手动调零完成，偏移值: {zero_offset:.2f} kg")
+    else:
+        print("调零失败，无法读取压力值。")
+
 def stop_data_collection():
     stop_event.set()
     print("数据采集已停止。")
@@ -129,7 +139,8 @@ def stop_data_collection():
         plt.ylabel("F (kg)")
         plt.title("F-Time Curve")
         plt.legend()
-        plt.grid()
+        plt.gca().set_facecolor("white")  # 设置坐标轴背景为白色
+        plt.grid(False)  # 去掉背景中的格子
 
         # 在曲线上显示每一次压力值的峰值
         for i in range(1, len(pressure_data) - 1):
@@ -152,6 +163,9 @@ def create_gui():
 
     stop_button = tk.Button(root, text="停止采集", command=stop_data_collection)
     stop_button.pack(pady=10)
+
+    zero_button = tk.Button(root, text="调零", command=manual_zero)  # 添加手动调零按钮
+    zero_button.pack(pady=10)
 
     exit_button = tk.Button(root, text="退出程序", command=lambda: (stop_data_collection(), root.destroy()))
     exit_button.pack(pady=10)
