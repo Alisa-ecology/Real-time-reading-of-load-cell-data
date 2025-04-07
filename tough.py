@@ -85,6 +85,7 @@ def read_pressure(retries=3):
 # 调用读取压力值函数
 try:
     zero_offset = None  # 用于存储调零偏移值
+    start_time = None  # 用于记录调零后的起始时间
     stop_thread = threading.Thread(target=stop_program)  # 启动停止线程
     stop_thread.start()
 
@@ -95,18 +96,20 @@ try:
             if zero_offset is None:
                 # 第一次读取时进行调零
                 zero_offset = pressure_value
+                start_time = current_time  # 记录调零后的起始时间
                 print(f"调零完成，偏移值: {zero_offset:.2f} kg")
             else:
                 # 后续读取减去调零偏移值
                 adjusted_pressure = pressure_value - zero_offset
-                print(f"实时压力值: {adjusted_pressure:.2f} kg")
+                elapsed_time = (current_time - start_time).total_seconds()  # 计算从调零开始的秒数
+                print(f"实时压力值: {adjusted_pressure:.2f} kg, 时间: {elapsed_time:.2f} 秒")
                 
                 # 记录压力值和时间
                 pressure_data.append(adjusted_pressure)
-                time_data.append(current_time)
+                time_data.append(elapsed_time)
         else:
             print("读取压力值失败，已记录日志。")
-        time.sleep(1)  # 采样间隔（根据需求调整）
+        time.sleep(0.05)  # 采样间隔改为 50 毫秒
 except KeyboardInterrupt:
     print("程序终止")
 finally:
@@ -115,11 +118,16 @@ finally:
     # 绘制压力-时间曲线
     if pressure_data and time_data:
         plt.figure(figsize=(10, 6))
-        plt.plot(time_data, pressure_data, label="压力值 (kg)")
-        plt.xlabel("时间")
-        plt.ylabel("压力 (kg)")
-        plt.title("压力-时间曲线")
+        plt.plot(time_data, pressure_data, label="F (kg)", marker="o")  # 修改图例
+        plt.xlabel("Time (s)")  # 修改横坐标名称
+        plt.ylabel("F (kg)")  # 修改纵坐标名称
+        plt.title("F-Time Curve")  # 修改标题
         plt.legend()
         plt.grid()
-        plt.gcf().autofmt_xdate()  # 自动格式化时间轴
+
+        # 在曲线上显示每一次压力值的峰值
+        for i in range(1, len(pressure_data) - 1):
+            if (pressure_data[i] >= pressure_data[i - 1]) and (pressure_data[i] > pressure_data[i + 1]):
+                plt.text(time_data[i], pressure_data[i], f"{pressure_data[i]:.2f}", fontsize=8, ha="center", va="bottom", color="red")
+
         plt.show()
