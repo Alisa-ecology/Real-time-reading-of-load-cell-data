@@ -1,5 +1,5 @@
 # Ensure the required packages are installed:
-# pip install minimalmodbus pyserial
+# pip install minimalmodbus pyserial pandas openpyxl
 from datetime import datetime  # 用于记录时间
 import minimalmodbus  # type: ignore
 import time
@@ -12,6 +12,7 @@ import tkinter as tk  # 用于创建按钮界面
 import matplotlib.animation as animation  # 用于实时动态绘图
 import matplotlib  # 用于设置后端
 from tkinter import filedialog  # 导入文件对话框模块
+import pandas as pd  # 导入 pandas 用于生成 Excel 文件
 matplotlib.use("TkAgg")  # 设置 TkAgg 后端以兼容 tkinter
 
 # 配置日志记录
@@ -187,6 +188,7 @@ def stop_data_collection():
     stop_event.set()
     print("数据采集已停止。")
     if pressure_data and time_data:
+        # 保存图片
         plt.figure(figsize=(10, 6))
         plt.plot(time_data, pressure_data, label="F (kg)", marker="o")
         plt.xlabel("Time (s)")
@@ -206,6 +208,16 @@ def stop_data_collection():
         plt.savefig(image_path)
         print(f"图片已保存到: {image_path}")
         plt.close()  # 关闭图形，避免与 Tkinter 冲突
+
+        # 保存数据到 Excel 文件
+        excel_path = os.path.join(image_folder, f"采集数据_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
+        try:
+            data = {"Time (s)": time_data, "F (kg)": pressure_data}
+            df = pd.DataFrame(data)
+            df.to_excel(excel_path, index=False)
+            print(f"Excel 数据已保存到: {excel_path}")
+        except Exception as e:
+            print(f"保存 Excel 文件时发生错误: {e}")
 
     # 不销毁窗口，仅停止采集
     print("采集已停止，但窗口仍然可用。")
