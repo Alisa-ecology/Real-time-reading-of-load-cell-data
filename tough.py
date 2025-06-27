@@ -102,12 +102,14 @@ def start_realtime_plot():
     """Start real-time dynamic plotting"""
     def plot():
         fig, ax = plt.subplots()
-        ax.set_title("F-Time Curve (Real-time)")  # Edit bracket content
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("F (kg)")
-        ax.set_facecolor("white")  # Set background to white
-        line, = ax.plot([], [], label="F (kg)", colour="blue")
-        ax.legend()
+        ax.set_title("F-Time Curve (Real-time)", color="#1a355e", fontsize=18)  # Edit bracket content
+        ax.set_xlabel("Time (s)", fontsize=14)
+        ax.set_ylabel("F (kg)", fontsize=14)
+        ax.set_facecolor("#ffffff")
+        ax.tick_params(axis='both', labelsize=13)
+        ax.grid(True, color="#d0d7e5", linestyle="--", linewidth=0.7, alpha=0.7)
+        line, = ax.plot([], [], label="F (kg)", color="#2176ae", linewidth=2)
+        ax.legend(fontsize=13)
 
         def init():
             """Initialise plot"""
@@ -251,13 +253,13 @@ def create_gui():
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     fig, ax = plt.subplots(figsize=(7, 4))
     fig.patch.set_facecolor("#f4f8fb")
-    ax.set_title("F-Time Curve (Real-time)", colour="#1a355e", fontsize=18)
+    ax.set_title("F-Time Curve (Real-time)", color="#1a355e", fontsize=18)
     ax.set_xlabel("Time (s)", fontsize=14)
     ax.set_ylabel("F (kg)", fontsize=14)
     ax.set_facecolor("#ffffff")
     ax.tick_params(axis='both', labelsize=13)
-    ax.grid(True, colour="#d0d7e5", linestyle="--", linewidth=0.7, alpha=0.7)
-    line, = ax.plot([], [], label="F (kg)", colour="#2176ae", linewidth=2)
+    ax.grid(True, color="#d0d7e5", linestyle="--", linewidth=0.7, alpha=0.7)
+    line, = ax.plot([], [], label="F (kg)", color="#2176ae", linewidth=2)
     ax.legend(fontsize=13)
 
     # Initial Y axis range 0-10kg
